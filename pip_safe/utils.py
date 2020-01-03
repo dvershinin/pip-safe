@@ -2,8 +2,6 @@ import errno
 import os
 import tempfile
 
-from importlib_metadata import IsADirectoryError
-
 
 def make_sure_path_exists(path):
     try:

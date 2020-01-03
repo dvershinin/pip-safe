@@ -143,14 +143,18 @@ def install_package(name, system_wide=False):
 
 
 def list_packages():
-    user_package_names = next(os.walk(get_venvs_dir()))[1]
-    user_packages = [['Package', 'Version']]
-    for pkg_name in user_package_names:
-        current_version = get_current_version(pkg_name)
-        user_packages.append([pkg_name, current_version])
-    print(
-        tabulate(user_packages, headers="firstrow")
-    )
+    if not os.path.exists(get_venvs_dir()):
+        log.info('No packages installed for this user.')
+        log.info('Run pip-safe install ... maybe?')
+    else:
+        user_package_names = next(os.walk(get_venvs_dir()))[1]
+        user_packages = [['Package', 'Version']]
+        for pkg_name in user_package_names:
+            current_version = get_current_version(pkg_name)
+            user_packages.append([pkg_name, current_version])
+        print(
+            tabulate(user_packages, headers="firstrow")
+        )
 
 
 def is_bin_in_path(system_wide=False):
