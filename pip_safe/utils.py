@@ -1,6 +1,9 @@
+import errno
 import os
 import tempfile
-import errno
+
+from importlib_metadata import IsADirectoryError
+
 
 def make_sure_path_exists(path):
     try:
@@ -8,6 +11,7 @@ def make_sure_path_exists(path):
     except OSError as exception:
         if exception.errno != errno.EEXIST:
             raise
+
 
 def ensure_file_is_absent(file_path):
     try:
@@ -36,20 +40,30 @@ def symlink(target, link_name, overwrite=False):
 
         # os.* functions mimic as closely as possible system functions
         # The POSIX symlink() returns EEXIST if link_name already exists
-        # https://pubs.opengroup.org/onlinepubs/9699919799/functions/symlink.html
+        # https://pubs.opengroup.org/onlinepubs/9699919799/functions/symlink
+        # .html
         try:
             os.symlink(target, temp_link_name)
             break
-        except FileExistsError:
-            pass
+        except OSError as e:
+            if e.errno == errno.EEXIST:
+                pass
+            else:
+                raise
 
     # Replace link_name with temp_link_name
     try:
         # Pre-empt os.replace on a directory with a nicer message
         if os.path.isdir(link_name):
-            raise IsADirectoryError(f"Cannot symlink over existing directory: '{link_name}'")
-        os.replace(temp_link_name, link_name)
-    except:
+            raise IsADirectoryError(
+                'Cannot symlink over existing directory: {}'.format(link_name)
+            )
+        import six
+        if six.PY2:
+            os.rename(temp_link_name, link_name)
+        else:
+            os.replace(temp_link_name, link_name)
+    except Exception:
         if os.path.islink(temp_link_name):
             os.remove(temp_link_name)
         raise
