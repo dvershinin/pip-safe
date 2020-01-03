@@ -7,7 +7,7 @@ import six
 import virtualenv
 from tabulate import tabulate
 
-from .utils import symlink, make_sure_path_exists, ensure_file_is_absent
+from .utils import symlink, make_sure_path_exists, ensure_file_is_absent, call_subprocess
 
 
 def confirm_smth(question):
@@ -55,7 +55,7 @@ def get_venv_executable_names(name, system_wide=False):
     venv_pip = get_venv_pip(name, system_wide)
     file_cmd = [venv_pip, 'show', '-f', name]
     log.debug('Running {}'.format(file_cmd))
-    for line in virtualenv.call_subprocess(
+    for line in call_subprocess(
             file_cmd,
             show_stdout=False,
             raise_on_return_code=False,
@@ -71,7 +71,7 @@ def get_current_version(name, system_wide=False):
     venv_pip = get_venv_pip(name, system_wide=system_wide)
     if venv_pip is None:
         return 'damaged (no inner pip)'
-    p = virtualenv.call_subprocess([venv_pip, 'show', name],
+    p = call_subprocess([venv_pip, 'show', name],
                                    show_stdout=False,
                                    raise_on_return_code=False)
     v = 'n/a'
@@ -105,7 +105,7 @@ def install_package(name, system_wide=False):
     log.debug("Running virtualenv's pip install {}".format(name))
     # call_subprocess here is used for convinience: since we already import
     # this, why not :)
-    virtualenv.call_subprocess(
+    call_subprocess(
         [venv_dir + '/bin/pip', 'install', name, '--quiet'])
 
     pkg_bin_names = get_venv_executable_names(name, system_wide)

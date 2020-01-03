@@ -1,7 +1,9 @@
 import errno
 import os
+import subprocess
+import sys
 import tempfile
-
+import logging as log  # for verbose output
 
 def make_sure_path_exists(path):
     try:
@@ -65,3 +67,95 @@ def symlink(target, link_name, overwrite=False):
         if os.path.islink(temp_link_name):
             os.remove(temp_link_name)
         raise
+
+
+def call_subprocess(
+    cmd,
+    show_stdout=True,
+    filter_stdout=None,
+    cwd=None,
+    raise_on_return_code=True,
+    extra_env=None,
+    remove_from_env=None,
+    stdin=None,
+):
+    cmd_parts = []
+    for part in cmd:
+        if len(part) > 45:
+            part = part[:20] + "..." + part[-20:]
+        if " " in part or "\n" in part or '"' in part or "'" in part:
+            part = '"{}"'.format(part.replace('"', '\\"'))
+        if hasattr(part, "decode"):
+            try:
+                part = part.decode(sys.getdefaultencoding())
+            except UnicodeDecodeError:
+                part = part.decode(sys.getfilesystemencoding())
+        cmd_parts.append(part)
+    cmd_desc = " ".join(cmd_parts)
+    if show_stdout:
+        stdout = None
+    else:
+        stdout = subprocess.PIPE
+    log.debug("Running command {}".format(cmd_desc))
+    if extra_env or remove_from_env:
+        env = os.environ.copy()
+        if extra_env:
+            env.update(extra_env)
+        if remove_from_env:
+            for var_name in remove_from_env:
+                env.pop(var_name, None)
+    else:
+        env = None
+    try:
+        proc = subprocess.Popen(
+            cmd,
+            stderr=subprocess.STDOUT,
+            stdin=None if stdin is None else subprocess.PIPE,
+            stdout=stdout,
+            cwd=cwd,
+            env=env,
+        )
+    except Exception:
+        e = sys.exc_info()[1]
+        log.critical("Error {} while executing command {}".format(e, cmd_desc))
+        raise
+    all_output = []
+    if stdout is not None:
+        if stdin is not None:
+            with proc.stdin:
+                proc.stdin.write(stdin)
+
+        encoding = sys.getdefaultencoding()
+        fs_encoding = sys.getfilesystemencoding()
+        with proc.stdout as stdout:
+            while 1:
+                line = stdout.readline()
+                try:
+                    line = line.decode(encoding)
+                except UnicodeDecodeError:
+                    line = line.decode(fs_encoding)
+                if not line:
+                    break
+                line = line.rstrip()
+                all_output.append(line)
+                if filter_stdout:
+                    level = filter_stdout(line)
+                    if isinstance(level, tuple):
+                        level, line = level
+                    log.debug(level, line)
+                    if not log.stdout_level_matches(level):
+                        log.show_progress()
+                else:
+                    log.debug(line)
+    else:
+        proc.communicate(stdin)
+    proc.wait()
+    if proc.returncode:
+        if raise_on_return_code:
+            if all_output:
+                log.debug("Complete output from command {}:".format(cmd_desc))
+                log.debug("\n".join(all_output) + "\n----------------------------------------")
+            raise OSError("Command {} failed with error code {}".format(cmd_desc, proc.returncode))
+        else:
+            log.warn("Command {} had error code {}".format(cmd_desc, proc.returncode))
+    return all_output
