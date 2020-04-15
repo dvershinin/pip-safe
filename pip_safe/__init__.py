@@ -9,7 +9,6 @@ from tabulate import tabulate
 
 from .utils import symlink, make_sure_path_exists, ensure_file_is_absent, call_subprocess
 
-
 def confirm_smth(question):
     reply = str(six.moves.input(question + ' (y/Nn): ')).lower().strip()
     if reply and reply[0] == 'y':
@@ -100,7 +99,15 @@ def install_package(name, system_wide=False):
         'Installing {} {} ...'.format(name, install_for)
     )
     log.debug('Creating virtualenv at {}'.format(venv_dir))
-    virtualenv.create_environment(venv_dir)
+    try:
+        virtualenv.create_environment(venv_dir)
+
+    except AttributeError:
+
+    # use cli_run for newer versions of virtualenv
+        from virtualenv import cli_run
+
+        cli_run([venv_dir])
 
     log.debug("Running virtualenv's pip install {}".format(name))
     # call_subprocess here is used for convinience: since we already import
