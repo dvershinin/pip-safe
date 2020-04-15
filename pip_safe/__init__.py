@@ -9,6 +9,7 @@ from tabulate import tabulate
 
 from .utils import symlink, make_sure_path_exists, ensure_file_is_absent, call_subprocess
 
+
 def confirm_smth(question):
     reply = str(six.moves.input(question + ' (y/Nn): ')).lower().strip()
     if reply and reply[0] == 'y':
