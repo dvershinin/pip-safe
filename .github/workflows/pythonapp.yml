@@ -33,4 +33,4 @@ jobs:
         flake8 pip_safe --count --exit-zero --max-complexity=30 --max-line-length=127 --statistics
     - name: Test with lastversion
       run: |
-        pip-safe install lastversion && lastversion self && pip-safe list
+        pip-safe install lastversion && ~/.local/bin/lastversion self && pip-safe list
