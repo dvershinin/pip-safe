@@ -5,6 +5,7 @@ import sys
 import tempfile
 import logging as log  # for verbose output
 
+
 def make_sure_path_exists(path):
     try:
         os.makedirs(path)
@@ -157,5 +158,5 @@ def call_subprocess(
                 log.debug("\n".join(all_output) + "\n----------------------------------------")
             raise OSError("Command {} failed with error code {}".format(cmd_desc, proc.returncode))
         else:
-            log.warn("Command {} had error code {}".format(cmd_desc, proc.returncode))
+            log.warning("Command {} had error code {}".format(cmd_desc, proc.returncode))
     return all_output

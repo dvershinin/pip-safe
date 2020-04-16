@@ -72,8 +72,8 @@ def get_current_version(name, system_wide=False):
     if venv_pip is None:
         return 'damaged (no inner pip)'
     p = call_subprocess([venv_pip, 'show', name],
-                                   show_stdout=False,
-                                   raise_on_return_code=False)
+                        show_stdout=False,
+                        raise_on_return_code=False)
     v = 'n/a'
     package_not_found = False
     for line in p:
@@ -103,7 +103,7 @@ def install_package(name, system_wide=False):
     try:
         virtualenv.create_environment(venv_dir)
     except AttributeError:
-    # use cli_run for newer versions of virtualenv
+        # use cli_run for newer versions of virtualenv
         from virtualenv import cli_run
         cli_run([venv_dir])
     log.debug("Running virtualenv's pip install {}".format(name))
@@ -147,18 +147,27 @@ def install_package(name, system_wide=False):
 
 
 def list_packages():
-    if not os.path.exists(get_venvs_dir()):
-        log.info('No packages installed for this user.')
-        log.info('Run pip-safe install ... maybe?')
-    else:
+    all_packages = [['Package', 'Version']]
+
+    if os.path.exists(get_venvs_dir()):
         user_package_names = next(os.walk(get_venvs_dir()))[1]
-        user_packages = [['Package', 'Version']]
+        user_packages = []
         for pkg_name in user_package_names:
             current_version = get_current_version(pkg_name)
             user_packages.append([pkg_name, current_version])
-        print(
-            tabulate(user_packages, headers="firstrow")
-        )
+        all_packages.extend(user_packages)
+
+    if os.path.exists(get_venvs_dir(system_wide=True)):
+        system_package_names = next(os.walk(get_venvs_dir(system_wide=True)))[1]
+        system_packages = []
+        for pkg_name in system_package_names:
+            current_version = get_current_version(pkg_name, system_wide=True)
+            system_packages.append(['*' + pkg_name, current_version])
+        all_packages.extend(system_packages)
+
+    print(
+        tabulate(all_packages, headers="firstrow")
+    )
 
 
 def is_bin_in_path(system_wide=False):

@@ -112,7 +112,7 @@ while not worrying about breaking your system.
 ## How
 
 it installs each program into its own virtualenv, and symlinks whichever
-executables it has over to ~/.local/bin/
+executables it has over to `~/.local/bin/`
 
 It is that easy and I don't know why nobody did this before.
 
