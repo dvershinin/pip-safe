@@ -31,7 +31,7 @@ then run `source ~/.bashrc` to apply to current shell.
 
 ### CentOS/RHEL  7, 8
 
-    sudo yum install https://extras.getpagespeed.com/release-el$(rpm -E %{rhel})-latest.rpm
+    sudo yum install https://extras.getpagespeed.com/release-latest.rpm
     sudo yum install pip-safe
     
 Using `pip-safe` command installs stuff using Python 3.
