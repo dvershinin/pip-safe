@@ -8,10 +8,15 @@ import logging as log  # for verbose output
 
 def make_sure_path_exists(path):
     try:
-        os.makedirs(path)
+        original_umask = os.umask(0)
+        # 0755 is required for /opt/safe-pip to be traversible
+        # for home it is safe anyway
+        os.makedirs(path, 0o755)
     except OSError as exception:
         if exception.errno != errno.EEXIST:
             raise
+    finally:
+        os.umask(original_umask)
 
 
 def ensure_file_is_absent(file_path):

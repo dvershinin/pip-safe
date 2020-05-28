@@ -7,6 +7,7 @@ import six
 import virtualenv
 from tabulate import tabulate
 
+from .__about__ import __version__
 from .utils import symlink, make_sure_path_exists, ensure_file_is_absent, call_subprocess
 
 
@@ -130,7 +131,7 @@ def install_package(name, system_wide=False):
             log.info('Oh, alright. You can peak around in {}'.format(venv_dir))
     else:
         if not is_bin_in_path(system_wide):
-            log.warn(
+            log.warning(
                 '{} is not in PATH so you can only launch programs like "{}" '
                 'by their complete filename, e.g. {} !'.format(
                     bin_dir, pkg_bin_names[0], bin_dir + '/' + pkg_bin_names[0]
@@ -142,8 +143,7 @@ def install_package(name, system_wide=False):
                 "~/.bashrc".format(
                     bin_dir if system_wide else '$HOME/.local/bin'))
         else:
-            log.info('Programs installed: {}'.format(', '.join(pkg_bin_names)))
-            log.info('Done!')
+            log.info('Programs installed. You can run them by typing: {}'.format(', '.join(pkg_bin_names)))
 
 
 def list_packages():
@@ -171,6 +171,12 @@ def list_packages():
 
 
 def is_bin_in_path(system_wide=False):
+    if system_wide:
+        # assume that /usr/local/bin is always in PATH
+        # the assumption here is because we don't want to falsely emit warning
+        # for sudo pip-safe --system install <foo>
+        # such calls would not load profile stuff and fail to detect PATH properly
+        return True
     path_env = os.environ['PATH']
     bin_dir = get_bin_dir(system_wide)
     path_dirs = path_env.split(':')
@@ -180,7 +186,7 @@ def is_bin_in_path(system_wide=False):
 def remove_package(name, system_wide=False, confirmation_needed=True):
     venv_dir = get_venv_dir(name, system_wide)
     if not os.path.exists(venv_dir):
-        log.warn('Looks like {} already does not exist. Nothing to do'.format(
+        log.warning('Looks like {} already does not exist. Nothing to do'.format(
             venv_dir))
         return False
     if confirmation_needed:
@@ -202,14 +208,22 @@ def remove_package(name, system_wide=False, confirmation_needed=True):
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('command', metavar='<command>', default=None)
+    parser = argparse.ArgumentParser(
+        description='Safely install and remove PyPi (pip) programs '
+                    'without breaking your system',
+        prog='pip-safe')
+    parser.add_argument('command', metavar='<command>', default=None,
+                        choices=['install', 'list', 'remove'],
+                        help='Command to run, e.g. install, remove or list')
     parser.add_argument('package', metavar='package-name', nargs='?',
                         default=None)
     parser.add_argument('-v', '--verbose', dest='verbose', action='store_true')
     parser.add_argument('-y', '--assumeyes', dest='confirmation_needed',
                         action='store_false', default=True)
-    parser.add_argument('--system', dest='system', action='store_true')
+    parser.add_argument('--system', dest='system', action='store_true',
+                        help='Install for all users')
+    parser.add_argument('--version', action='version',
+                        version='%(prog)s {version}'.format(version=__version__))
     parser.set_defaults(verbose=False, verbose_more=False, system=False)
     args = parser.parse_args()
 
