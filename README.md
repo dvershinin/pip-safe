@@ -7,7 +7,7 @@
     
 ### Why
 
-Using `pip install ...` outside virtualenv can simply break your system.
+Using `pip install ...` outside virtualenv [can simply break your system](https://www.getpagespeed.com/server-setup/do-not-run-pip-as-root).
 So many tutorials out there blindly recommend that without any note of having to use virtualenvs,
 and so many people *do* just run that without any knowledge of *what* a virtualenv is.
 
