@@ -1,4 +1,5 @@
 import argparse
+import json
 import logging as log  # for verbose output
 import os
 import shutil
@@ -34,6 +35,10 @@ def get_bin_dir(system_wide=False):
 
 
 def get_venv_dir(name, system_wide=False):
+    # replace any slashes in the 'name', for a case when git URL is passed
+    # as a dumb way to make result directory creatable
+    name = name.replace('https://', '')
+    name = name.replace('/', '_')
     venvs_dir = get_venvs_dir(system_wide=system_wide)
     return os.path.join(venvs_dir, name)
 
@@ -54,7 +59,25 @@ def get_venv_executable_names(name, system_wide=False):
     log.debug("Checking what was installed to virtualenv's bin")
     bin_names = []
     venv_pip = get_venv_pip(name, system_wide)
-    file_cmd = [venv_pip, 'show', '-f', name]
+    main_package_name = name
+    # if the passed name was a URL, we have to figure out the name of the "main"
+    # package that was installed, by listing non-dependent packages and weeding
+    # out known stuff like wheel and pip itself
+    if name.startswith('git+'):
+        list_cmd = [venv_pip, 'list', '--not-required', '--format', 'json']
+        log.debug('Running {}'.format(list_cmd))
+        list_output = call_subprocess(
+                list_cmd,
+                show_stdout=False,
+                raise_on_return_code=False,
+        )
+        packages = json.loads(list_output[0])
+        for package in packages:
+            if package['name'] not in ['pip', 'setuptools', 'wheel']:
+                main_package_name = package['name']
+                break
+
+    file_cmd = [venv_pip, 'show', '-f', main_package_name]
     log.debug('Running {}'.format(file_cmd))
     for line in call_subprocess(
             file_cmd,
@@ -89,12 +112,10 @@ def get_current_version(name, system_wide=False):
 
 def install_package(name, system_wide=False):
     # create and activate the virtual environment
-    venvs_dir = get_venvs_dir(system_wide=system_wide)
     bin_dir = get_bin_dir(system_wide=system_wide)
 
-    make_sure_path_exists(venvs_dir)
-
-    venv_dir = os.path.join(venvs_dir, name)
+    venv_dir = get_venv_dir(name, system_wide=system_wide)
+    make_sure_path_exists(venv_dir)
 
     install_for = 'system-wide' if system_wide else 'for current user'
     log.info(

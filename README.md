@@ -88,6 +88,10 @@ optional arguments:
     
 To see what's going on under the hood, pass `--verbose` flag. 
 
+There is limited support for installing directly from Git URLs, e.g.:
+
+    pip-safe install git+https://github.com/dvershinin/lastversion.git 
+
 #### Global installation
 
 By default, programs are installed to `~/.local/bin/<package>` (for current user).
@@ -96,7 +100,7 @@ For a system-wide installation, use `--system`:
     sudo pip-safe install --system lastversion  
     
 This installs a package to `/opt/pip-safe/<package>` and symlinks its executable to `/usr/local/bin`,
-so it's still safe :)    
+so it's still safe :-)    
     
 ### Removing a program
 
