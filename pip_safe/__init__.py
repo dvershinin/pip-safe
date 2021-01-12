@@ -39,6 +39,8 @@ def get_venv_dir(name, system_wide=False):
     # as a dumb way to make result directory creatable
     name = name.replace('https://', '')
     name = name.replace('/', '_')
+    # sanitize version specifier if user installs, e.g. lastversion==1.2.4
+    name = name.split('==')[0]
     venvs_dir = get_venvs_dir(system_wide=system_wide)
     return os.path.join(venvs_dir, name)
 
@@ -59,7 +61,8 @@ def get_venv_executable_names(name, system_wide=False):
     log.debug("Checking what was installed to virtualenv's bin")
     bin_names = []
     venv_pip = get_venv_pip(name, system_wide)
-    main_package_name = name
+    # sanitize version specifier if user installs, e.g. lastversion==1.2.4
+    main_package_name = name.split('==')[0]
     # if the passed name was a URL, we have to figure out the name of the "main"
     # package that was installed, by listing non-dependent packages and weeding
     # out known stuff like wheel and pip itself
@@ -110,7 +113,7 @@ def get_current_version(name, system_wide=False):
     return v
 
 
-def install_package(name, system_wide=False):
+def install_package(name, system_wide=False, upgrade=False):
     # create and activate the virtual environment
     bin_dir = get_bin_dir(system_wide=system_wide)
 
@@ -118,9 +121,14 @@ def install_package(name, system_wide=False):
     make_sure_path_exists(venv_dir)
 
     install_for = 'system-wide' if system_wide else 'for current user'
-    log.info(
-        'Installing {} {} ...'.format(name, install_for)
-    )
+    if not upgrade:
+        log.info(
+            'Installing {} {} ...'.format(name, install_for)
+        )
+    else:
+        log.info(
+            'Upgrading {} {} ...'.format(name, install_for)
+        )
     log.debug('Creating virtualenv at {}'.format(venv_dir))
     try:
         virtualenv.create_environment(venv_dir)
@@ -131,8 +139,12 @@ def install_package(name, system_wide=False):
     log.debug("Running virtualenv's pip install {}".format(name))
     # call_subprocess here is used for convinience: since we already import
     # this, why not :)
-    call_subprocess(
-        [venv_dir + '/bin/pip', 'install', name, '--quiet'])
+    args = [venv_dir + '/bin/pip', 'install']
+    if upgrade:
+        args.append('-U')
+    args.append(name)
+    args.append('--quiet')
+    call_subprocess(args)
 
     pkg_bin_names = get_venv_executable_names(name, system_wide)
     for bin_name in pkg_bin_names:
@@ -234,8 +246,8 @@ def main():
                     'without breaking your system',
         prog='pip-safe')
     parser.add_argument('command', metavar='<command>', default=None,
-                        choices=['install', 'list', 'remove'],
-                        help='Command to run, e.g. install, remove or list')
+                        choices=['install', 'update', 'upgrade', 'list', 'remove'],
+                        help='Command to run, e.g. install, update, remove or list')
     parser.add_argument('package', metavar='package-name', nargs='?',
                         default=None)
     parser.add_argument('-v', '--verbose', dest='verbose', action='store_true')
@@ -255,7 +267,12 @@ def main():
         log.basicConfig(format="%(levelname)s: %(message)s", level=log.INFO)
 
     if args.command == 'install':
-        install_package(name=args.package, system_wide=args.system)
+        install_package(name=args.package,
+                        system_wide=args.system)
+    elif args.command in ['update', 'upgrade']:
+        install_package(name=args.package,
+                        system_wide=args.system,
+                        upgrade=True)
     elif args.command == 'list':
         list_packages()
     elif args.command == 'remove':

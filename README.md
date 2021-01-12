@@ -31,8 +31,8 @@ then run `source ~/.bashrc` to apply to current shell.
 
 ### CentOS/RHEL  7, 8
 
-    sudo yum install https://extras.getpagespeed.com/release-latest.rpm
-    sudo yum install pip-safe
+    sudo yum -y install https://extras.getpagespeed.com/release-latest.rpm
+    sudo yum -y install pip-safe
     
 Using `pip-safe` command installs stuff using Python 3.
 
@@ -69,17 +69,18 @@ Ensure `virtualenv-3` is installed and `/usr/local/bin` is in your `PATH`, then:
 ## Usage
 
 ``` 
-usage: pip-safe [-h] [-v] [-y] [--system] <command> [package-name]
+Safely install and remove PyPi (pip) programs without breaking your system
 
 positional arguments:
-  <command>
+  <command>        Command to run, e.g. install, update, remove or list
   package-name
 
 optional arguments:
   -h, --help       show this help message and exit
   -v, --verbose
   -y, --assumeyes
-  --system
+  --system         Install for all users
+  --version        show program's version number and exit
 ```
 
 ### Installing a program
@@ -90,7 +91,7 @@ To see what's going on under the hood, pass `--verbose` flag.
 
 There is limited support for installing directly from Git URLs, e.g.:
 
-    pip-safe install git+https://github.com/dvershinin/lastversion.git 
+    pip-safe install git+https://github.com/dvershinin/lastversion.git
 
 #### Global installation
 
@@ -105,6 +106,10 @@ so it's still safe :-)
 ### Removing a program
 
     pip-safe remove <name>
+
+### Updating a program
+
+    pip-safe update <name>
     
 ### Listing installed packages
 
