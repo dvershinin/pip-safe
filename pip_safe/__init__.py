@@ -24,7 +24,7 @@ def get_venvs_dir(system_wide=False):
     if not system_wide:
         return os.path.join(os.path.expanduser('~'), '.virtualenvs')
     else:
-        return '/opt/safe-pip'
+        return '/opt/pip-safe'
 
 
 def get_bin_dir(system_wide=False):
