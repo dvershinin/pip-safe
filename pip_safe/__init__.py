@@ -121,25 +121,40 @@ def install_package(name, system_wide=False, upgrade=False):
     make_sure_path_exists(venv_dir)
 
     install_for = 'system-wide' if system_wide else 'for current user'
-    if not upgrade:
-        log.info(
-            'Installing {} {} ...'.format(name, install_for)
-        )
-    else:
+    create_virtualenv = True
+    venv_pip = venv_dir + '/bin/pip'
+    if upgrade:
         log.info(
             'Upgrading {} {} ...'.format(name, install_for)
         )
-    log.debug('Creating virtualenv at {}'.format(venv_dir))
-    try:
-        virtualenv.create_environment(venv_dir)
-    except AttributeError:
-        # use cli_run for newer versions of virtualenv
-        from virtualenv import cli_run
-        cli_run([venv_dir])
-    log.debug("Running virtualenv's pip install {}".format(name))
-    # call_subprocess here is used for convinience: since we already import
+        # if pip is there, do not recreate virtualenv
+        if os.path.exists(venv_pip):
+            create_virtualenv = False
+    else:
+        log.info(
+            'Installing {} {} ...'.format(name, install_for)
+        )
+
+    if create_virtualenv:
+        log.debug('Creating virtualenv at {}'.format(venv_dir))
+        try:
+            virtualenv.create_environment(venv_dir)
+        except AttributeError:
+            # use cli_run for newer versions of virtualenv
+            from virtualenv import cli_run
+            cli_run([venv_dir])
+
+    # before invoking pip, ensure it is the latest by upgrading it
+    args = [venv_pip, 'install', '--upgrade', 'pip', '--quiet']
+    # the env var is supposed to hide the "old version" warning emitted
+    # in the very first run
+    log.info('Ensuring latest pip in the virtualenv')
+    call_subprocess(args, extra_env={'PIP_DISABLE_PIP_VERSION_CHECK': '1'})
+
+    log.debug("Running pip install in the virtualenv {}".format(name))
+    # call_subprocess here is used for convenience: since we already import
     # this, why not :)
-    args = [venv_dir + '/bin/pip', 'install']
+    args = [venv_pip, 'install']
     if upgrade:
         args.append('-U')
     args.append(name)
