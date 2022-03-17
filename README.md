@@ -2,6 +2,8 @@
 
 `pip-safe` is the *safe* and easy pip package manager for command-line apps from PyPi.
 
+### Synopsys
+
     pip-safe install lastversion
     lastversion linux
     
@@ -29,17 +31,20 @@ Configure your `PATH` to execute stuff from `~/.local/bin` and `/usr/local/bin`.
 Place `export PATH=$PATH:$HOME/.local/bin:/usr/local/bin` in your `~/.bashrc` 
 then run `source ~/.bashrc` to apply to current shell. 
 
-### CentOS/RHEL  7, 8
+### CentOS/RHEL  7, 8 and Fedora Linux
 
     sudo yum -y install https://extras.getpagespeed.com/release-latest.rpm
     sudo yum -y install pip-safe
     
-Using `pip-safe` command installs stuff using Python 3.
+Using `pip-safe` command installs a program using Python 3, by default.
 
-You can additionally `yum install pip2-safe` to have `pip2-safe` 
-(would be required for installing apps which support only Python 2).
+If you require to run a legacy app using Python 2, run `yum install pip2-safe` to install Python 2 
+support. Then to install a Python 2 app, use `pip2-safe install <app>`. You can still use 
+`pip-safe` as usual, for Python 3 apps.
     
 ### Other systems
+
+Please do not use these methods if packages for `pip-safe` are available!
 
 #### Install `pip-safe` for current user
 
@@ -127,7 +132,7 @@ It is that easy and I don't know why nobody did this before.
 
 ## Caveats
 
-* Only pure Python apps will work absolutely reliably, because others might require *system* libraries
+* Only pure Python apps will work absolutely reliably, because others might require *system* libraries,
 and we can't decipher what are those
 * Tested only with Python 3.6
 

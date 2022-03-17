@@ -1,6 +1,6 @@
 import argparse
 import json
-import logging as log  # for verbose output
+import logging
 import os
 import shutil
 
@@ -10,6 +10,8 @@ from tabulate import tabulate
 
 from .__about__ import __version__
 from .utils import symlink, make_sure_path_exists, ensure_file_is_absent, call_subprocess
+
+log = logging.getLogger('pip-safe')
 
 
 def confirm_smth(question):
@@ -61,6 +63,8 @@ def get_venv_executable_names(name, system_wide=False):
     log.debug("Checking what was installed to virtualenv's bin")
     bin_names = []
     venv_pip = get_venv_pip(name, system_wide)
+    if not venv_pip:
+        return []
     # sanitize version specifier if user installs, e.g. lastversion==1.2.4
     main_package_name = name.split('==')[0]
     # if the passed name was a URL, we have to figure out the name of the "main"
@@ -82,15 +86,18 @@ def get_venv_executable_names(name, system_wide=False):
 
     file_cmd = [venv_pip, 'show', '-f', main_package_name]
     log.debug('Running {}'.format(file_cmd))
-    for line in call_subprocess(
-            file_cmd,
-            show_stdout=False,
-            raise_on_return_code=False,
-    ):
-        line = line.strip()
-        if line.startswith('../../../bin/'):
-            basename = os.path.basename(line)
-            bin_names.append(basename)
+    try:
+        for line in call_subprocess(
+                file_cmd,
+                show_stdout=False,
+                raise_on_return_code=True,
+        ):
+            line = line.strip()
+            if line.startswith('../../../bin/'):
+                basename = os.path.basename(line)
+                bin_names.append(basename)
+    except OSError:
+        return []
     return bin_names
 
 
@@ -98,9 +105,12 @@ def get_current_version(name, system_wide=False):
     venv_pip = get_venv_pip(name, system_wide=system_wide)
     if venv_pip is None:
         return 'damaged (no inner pip)'
-    p = call_subprocess([venv_pip, 'show', name],
-                        show_stdout=False,
-                        raise_on_return_code=False)
+    try:
+        p = call_subprocess([venv_pip, 'show', name],
+                            show_stdout=False,
+                            raise_on_return_code=False)
+    except FileNotFoundError:
+        return 'damaged (Python interpreter is not found)'
     v = 'n/a'
     package_not_found = False
     for line in p:
@@ -149,6 +159,7 @@ def install_package(name, system_wide=False, upgrade=False):
     # the env var is supposed to hide the "old version" warning emitted
     # in the very first run
     log.info('Ensuring latest pip in the virtualenv')
+    log.debug("PIP_DISABLE_PIP_VERSION_CHECK=1 " + " ".join(args))
     call_subprocess(args, extra_env={'PIP_DISABLE_PIP_VERSION_CHECK': '1'})
 
     log.debug("Running pip install in the virtualenv {}".format(name))
@@ -159,7 +170,12 @@ def install_package(name, system_wide=False, upgrade=False):
         args.append('-U')
     args.append(name)
     args.append('--quiet')
-    call_subprocess(args)
+    try:
+        call_subprocess(args)
+    except OSError:
+        # clean up virtualenv on pip error
+        return remove_package(name, system_wide, confirmation_needed=False,
+                              silent=True)
 
     pkg_bin_names = get_venv_executable_names(name, system_wide)
     for bin_name in pkg_bin_names:
@@ -231,7 +247,7 @@ def is_bin_in_path(system_wide=False):
     return bin_dir in path_dirs
 
 
-def remove_package(name, system_wide=False, confirmation_needed=True):
+def remove_package(name, system_wide=False, confirmation_needed=True, silent=False):
     venv_dir = get_venv_dir(name, system_wide)
     if not os.path.exists(venv_dir):
         log.warning('Looks like {} already does not exist. Nothing to do'.format(
@@ -252,7 +268,10 @@ def remove_package(name, system_wide=False, confirmation_needed=True):
     log.debug('Going to remove: {}'.format(venv_dir))
     if os.path.exists(venv_dir):
         shutil.rmtree(venv_dir)
-    log.info('{} was removed.'.format(name))
+    if silent:
+        log.debug('Cleaned up {}'.format(name))
+    else:
+        log.info('{} was removed.'.format(name))
 
 
 def main():
@@ -275,11 +294,21 @@ def main():
     parser.set_defaults(verbose=False, verbose_more=False, system=False)
     args = parser.parse_args()
 
+    # create console handler and set level to debug
+    ch = logging.StreamHandler()
+    # create formatter
+    fmt = '%(name)s - %(levelname)s - %(message)s' if args.verbose else '%(levelname)s: %(message)s'
+    formatter = logging.Formatter(fmt)
+    # add formatter to ch
+    ch.setFormatter(formatter)
+    # add ch to logger
+    log.addHandler(ch)
+
     if args.verbose:
-        log.basicConfig(format="%(levelname)s: %(message)s", level=log.DEBUG)
+        log.setLevel(logging.DEBUG)
         log.info("Verbose output.")
     else:
-        log.basicConfig(format="%(levelname)s: %(message)s", level=log.INFO)
+        log.setLevel(logging.INFO)
 
     if args.command == 'install':
         install_package(name=args.package,

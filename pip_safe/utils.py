@@ -29,8 +29,9 @@ def ensure_file_is_absent(file_path):
 def symlink(target, link_name, overwrite=False):
     '''
     Create a symbolic link named link_name pointing to target.
-    If link_name exists then FileExistsError is raised, unless overwrite=True.
-    When trying to overwrite a directory, IsADirectoryError is raised.
+    The whole point of this is being able to overwrite
+    Whereas default Python os.symlink will fail on existing file
+    See https://stackoverflow.com/questions/8299386/modifying-a-symlink-in-python
     '''
 
     if not overwrite:
