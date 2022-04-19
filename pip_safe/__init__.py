@@ -43,6 +43,11 @@ def get_venv_dir(name, system_wide=False):
     name = name.replace('/', '_')
     # sanitize version specifier if user installs, e.g. lastversion==1.2.4
     name = name.split('==')[0]
+
+    # If we are installing from the current directory,
+    # use that as the package name
+    if name == ".":
+        name = os.path.basename(os.getcwd())
     venvs_dir = get_venvs_dir(system_wide=system_wide)
     return os.path.join(venvs_dir, name)
 
@@ -62,6 +67,13 @@ def get_venv_pip(name, system_wide=False):
 def get_venv_executable_names(name, system_wide=False):
     log.debug("Checking what was installed to virtualenv's bin")
     bin_names = []
+
+    # If we installed from the current directory,
+    # use that as the package name
+    if name == ".":
+        name = os.getcwd()
+        name = name.rsplit('/', 1)[-1]
+
     venv_pip = get_venv_pip(name, system_wide)
     if not venv_pip:
         return []
