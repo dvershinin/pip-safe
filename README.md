@@ -51,21 +51,22 @@ Please do not use these methods if packages for `pip-safe` are available!
 If you install `pip-safe` using this method, you can only install packages for current user,
 but this method does not require root. 
 
-Ensure `virtualenv-3` is installed and `~/.local/bin` is in your `PATH`, then: 
+Ensure `~/.local/bin` is in your `PATH`, then: 
    
     mkdir -p ~/.virtualenvs
-    virtualenv-3 ~/.virtualenvs/pip-safe
+    python3 -m venv ~/.virtualenvs/pip-safe
     ~/.virtualenvs/pip-safe/bin/pip install pip-safe
+    mkdir -p $HOME/.local/bin
     ln -s $HOME/.virtualenvs/pip-safe/bin/pip-safe $HOME/.local/bin/pip-safe
 
 #### System-wide installation of `pip-safe`    
 
 When `pip-safe` is installed system-wide, you can install both system-wide and user packages with it.
     
-Ensure `virtualenv-3` is installed and `/usr/local/bin` is in your `PATH`, then:
+Ensure `/usr/local/bin` is in your `PATH`, then:
 
     mkdir -p /opt/pip-safe
-    virtualenv-3 /opt/pip-safe/pip-safe
+    python3 -m venv /opt/pip-safe/pip-safe
     /opt/pip-safe/pip-safe/bin/pip install pip-safe
     ln -s /opt/pip-safe/pip-safe/bin/pip-safe /usr/local/bin/pip-safe
 
