@@ -136,6 +136,11 @@ def get_current_version(name, system_wide=False):
 
 
 def install_package(name, system_wide=False, upgrade=False):
+    # for system-wide install, we must ensure virtualenv and pip create world-readable files,
+    # umask 022 will create 755/644
+    restore_umask = None
+    if system_wide:
+        restore_umask = os.umask(0o022)
     # create and activate the virtual environment
     bin_dir = get_bin_dir(system_wide=system_wide)
 
@@ -190,12 +195,6 @@ def install_package(name, system_wide=False, upgrade=False):
                               silent=True)
 
     pkg_bin_names = get_venv_executable_names(name, system_wide)
-    for bin_name in pkg_bin_names:
-        src = os.path.join(venv_dir, 'bin', bin_name)
-        dst = os.path.join(bin_dir, bin_name)
-        log.debug('Creating symlink: {} -> {}'.format(src, dst))
-        make_sure_path_exists(bin_dir)
-        symlink(src, dst, overwrite=True)
 
     if not pkg_bin_names:
         log.error(
@@ -206,6 +205,12 @@ def install_package(name, system_wide=False, upgrade=False):
         else:
             log.info('Oh, alright. You can peak around in {}'.format(venv_dir))
     else:
+        make_sure_path_exists(bin_dir)
+        for bin_name in pkg_bin_names:
+            src = os.path.join(venv_dir, 'bin', bin_name)
+            dst = os.path.join(bin_dir, bin_name)
+            log.debug('Creating symlink: {} -> {}'.format(src, dst))
+            symlink(src, dst, overwrite=True)
         if not is_bin_in_path(system_wide):
             log.warning(
                 '{} is not in PATH so you can only launch programs like "{}" '
@@ -220,6 +225,8 @@ def install_package(name, system_wide=False, upgrade=False):
                     bin_dir if system_wide else '$HOME/.local/bin'))
         else:
             log.info('Programs installed. You can run them by typing: {}'.format(', '.join(pkg_bin_names)))
+    if restore_umask:
+        os.umask(restore_umask)
 
 
 def list_packages():
