@@ -33,14 +33,21 @@ Configure your `PATH` to execute stuff from `~/.local/bin` and `/usr/local/bin`.
 Place `export PATH=$PATH:$HOME/.local/bin:/usr/local/bin` in your `~/.bashrc` 
 then run `source ~/.bashrc` to apply to current shell. 
 
-### CentOS/RHEL  7, 8 and Fedora Linux
+### CentOS/RHEL, Fedora Linux and Amazon Linux 2023
 
     sudo yum -y install https://extras.getpagespeed.com/release-latest.rpm
     sudo yum -y install pip-safe
+
+### Amazon Linux 2
+
+Amazon Linux 2 requires disabling EPEL repository due to its reliance on Python 3.7.
+
+   sudo yum -y install https://extras.getpagespeed.com/release-latest.rpm
+   sudo yum --disablerepo=epel install pip-safe
     
 Using `pip-safe` command installs a program using Python 3, by default.
 
-If you require to run a legacy app using Python 2, run `yum install pip2-safe` to install Python 2 
+If you require running a legacy app using Python 2, run `yum install pip2-safe` to install Python 2 
 support. Then to install a Python 2 app, use `pip2-safe install <app>`. You can still use 
 `pip-safe` as usual, for Python 3 apps.
     
