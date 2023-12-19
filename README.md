@@ -35,15 +35,19 @@ then run `source ~/.bashrc` to apply to current shell.
 
 ### CentOS/RHEL, Fedora Linux and Amazon Linux 2023
 
-    sudo yum -y install https://extras.getpagespeed.com/release-latest.rpm
-    sudo yum -y install pip-safe
+```bash
+sudo yum -y install https://extras.getpagespeed.com/release-latest.rpm
+sudo yum -y install pip-safe
+```
 
 ### Amazon Linux 2
 
 Amazon Linux 2 requires disabling EPEL repository due to its reliance on Python 3.7.
 
-   sudo yum -y install https://extras.getpagespeed.com/release-latest.rpm
-   sudo yum --disablerepo=epel install pip-safe
+```bash
+sudo yum -y install https://extras.getpagespeed.com/release-latest.rpm
+sudo yum --disablerepo=epel install pip-safe
+```
     
 Using `pip-safe` command installs a program using Python 3, by default.
 
