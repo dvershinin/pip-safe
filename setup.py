@@ -7,11 +7,20 @@ pip-safe
   $ pip-safe list
   $ pip-safe remove <foo>
 """
+import sys
 
 from setuptools import find_packages, setup
 import os
 
-install_requires = ["virtualenv", 'pip', 'tabulate', 'six']
+install_requires = [
+    'pip',
+    'tabulate',
+    'six'
+]
+
+if sys.version_info[0] == 2:
+    install_requires.append("virtualenv")
+
 tests_requires = ['pytest', 'flake8']
 
 with open("README.md", "r") as fh:
@@ -48,4 +57,7 @@ setup(
         "Operating System :: OS Independent",
         "Topic :: Software Development",
     ],
+    # Exclude Python 3.0 through 3.3 due to venv not having with_pip option
+    python_requires='>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*'
+
 )
