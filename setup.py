@@ -12,16 +12,12 @@ import sys
 from setuptools import find_packages, setup
 import os
 
-install_requires = [
-    'pip',
-    'tabulate',
-    'six'
-]
+install_requires = ["pip", "tabulate", "six"]
 
 if sys.version_info[0] == 2:
     install_requires.append("virtualenv")
 
-tests_requires = ['pytest', 'flake8']
+tests_requires = ["pytest", "flake8"]
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
@@ -29,7 +25,7 @@ with open("README.md", "r") as fh:
 base_dir = os.path.dirname(__file__)
 
 version = {}
-with open(os.path.join(base_dir, "pip_safe", "__about__.py")) as fp:
+with open(os.path.join(base_dir, "src", "pip_safe", "__about__.py")) as fp:
     exec(fp.read(), version)
 
 setup(
@@ -41,7 +37,8 @@ setup(
     description="A CLI tool to safely install CLI programs from PyPi",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    packages=find_packages(exclude=["tests"]),
+    package_dir={"": "src"},  # Specify that the package is under the src directory
+    packages=find_packages(where="src", exclude=["tests"]),
     zip_safe=False,
     license="BSD",
     install_requires=install_requires,
@@ -50,7 +47,7 @@ setup(
     },
     tests_require=tests_requires,
     include_package_data=True,
-    entry_points={"console_scripts": ["pip-safe = pip_safe:main"]},
+    entry_points={"console_scripts": ["pip-safe = pip_safe.main:main"]},
     classifiers=[
         "Intended Audience :: Developers",
         "Intended Audience :: System Administrators",
@@ -58,6 +55,5 @@ setup(
         "Topic :: Software Development",
     ],
     # Exclude Python 3.0 through 3.3 due to venv not having with_pip option
-    python_requires='>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*'
-
+    python_requires=">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*",
 )

@@ -1,9 +1,10 @@
+"""Utilities for pip-safe"""
 import errno
+import logging as log  # for verbose output
 import os
 import subprocess
 import sys
 import tempfile
-import logging as log  # for verbose output
 
 
 def make_sure_path_exists(path):
@@ -20,6 +21,7 @@ def make_sure_path_exists(path):
 
 
 def ensure_file_is_absent(file_path):
+    """Remove file if it exists"""
     try:
         os.remove(file_path)
     except OSError:
@@ -27,12 +29,12 @@ def ensure_file_is_absent(file_path):
 
 
 def symlink(target, link_name, overwrite=False):
-    '''
+    """
     Create a symbolic link named link_name pointing to target.
     The whole point of this is being able to overwrite
     Whereas default Python os.symlink will fail on existing file
     See https://stackoverflow.com/questions/8299386/modifying-a-symlink-in-python
-    '''
+    """
 
     if not overwrite:
         os.symlink(target, link_name)
@@ -53,9 +55,7 @@ def symlink(target, link_name, overwrite=False):
             os.symlink(target, temp_link_name)
             break
         except OSError as e:
-            if e.errno == errno.EEXIST:
-                pass
-            else:
+            if e.errno != errno.EEXIST:
                 raise
 
     # Replace link_name with temp_link_name
@@ -63,9 +63,10 @@ def symlink(target, link_name, overwrite=False):
         # Pre-empt os.replace on a directory with a nicer message
         if os.path.isdir(link_name):
             raise IsADirectoryError(
-                'Cannot symlink over existing directory: {}'.format(link_name)
+                "Cannot symlink over existing directory: {}".format(link_name)
             )
         import six
+
         if six.PY2:
             os.rename(temp_link_name, link_name)
         else:
@@ -161,8 +162,14 @@ def call_subprocess(
         if raise_on_return_code:
             if all_output:
                 log.debug("Complete output from command {}:".format(cmd_desc))
-                log.debug("\n".join(all_output) + "\n----------------------------------------")
-            raise OSError("Command {} failed with error code {}".format(cmd_desc, proc.returncode))
+                log.debug(
+                    "\n".join(all_output) + "\n----------------------------------------"
+                )
+            raise OSError(
+                "Command {} failed with error code {}".format(cmd_desc, proc.returncode)
+            )
         else:
-            log.warning("Command {} had error code {}".format(cmd_desc, proc.returncode))
+            log.warning(
+                "Command {} had error code {}".format(cmd_desc, proc.returncode)
+            )
     return all_output

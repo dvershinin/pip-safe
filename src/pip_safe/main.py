@@ -1,3 +1,4 @@
+"""Main module of pip-safe"""
 import argparse
 import json
 import logging
@@ -5,6 +6,15 @@ import os
 import shutil
 
 import six
+from tabulate import tabulate
+
+from pip_safe.__about__ import __version__
+from pip_safe.utils import (
+    symlink,
+    make_sure_path_exists,
+    ensure_file_is_absent,
+    call_subprocess,
+)
 
 USE_VIRTUALENV = False
 
@@ -15,44 +25,35 @@ try:
 except ImportError:
     import venv
 
-from tabulate import tabulate
-
-from .__about__ import __version__
-from .utils import (
-    symlink,
-    make_sure_path_exists,
-    ensure_file_is_absent,
-    call_subprocess,
-)
-
 log = logging.getLogger("pip-safe")
 
 
 def confirm_smth(question):
+    """Ask a yes/no question via input() and return their answer."""
     reply = str(six.moves.input(question + " (y/Nn): ")).lower().strip()
     if reply and reply[0] == "y":
         return True
-    else:
-        return False
+    return False
 
 
 def get_venvs_dir(system_wide=False):
+    """Return the directory where virtualenvs are stored"""
     if not system_wide:
         return os.path.join(os.path.expanduser("~"), ".virtualenvs")
-    else:
-        return "/opt/pip-safe"
+    return "/opt/pip-safe"
 
 
 def get_bin_dir(system_wide=False):
+    """Return the directory where symlinks to executables are stored"""
     if not system_wide:
         return os.path.join(os.path.expanduser("~"), ".local", "bin")
-    else:
-        return "/usr/local/bin"
+    return "/usr/local/bin"
 
 
 def get_venv_dir(name, system_wide=False):
+    """Return the directory where virtualenv is stored"""
     # replace any slashes in the 'name', for a case when git URL is passed
-    # as a dumb way to make result directory creatable
+    # as a foolish way to make result directory creatable
     name = name.replace("https://", "")
     name = name.replace("/", "_")
     # sanitize version specifier if user installs, e.g. lastversion==1.2.4
@@ -67,6 +68,7 @@ def get_venv_dir(name, system_wide=False):
 
 
 def get_venv_pip(name, system_wide=False):
+    """Return the path to pip in the virtualenv"""
     venv_pip = os.path.join(get_venv_dir(name, system_wide=system_wide), "bin", "pip")
     if not os.path.exists(venv_pip):
         return None
@@ -75,6 +77,7 @@ def get_venv_pip(name, system_wide=False):
 
 
 def get_venv_executable_names(name, system_wide=False):
+    """Return the list of executable names that were installed to virtualenv's bin"""
     log.debug("Checking what was installed to virtualenv's bin")
     bin_names = []
 
@@ -94,7 +97,7 @@ def get_venv_executable_names(name, system_wide=False):
     # out known stuff like wheel and pip itself
     if name.startswith("git+"):
         list_cmd = [venv_pip, "list", "--not-required", "--format", "json"]
-        log.debug("Running {}".format(list_cmd))
+        log.debug("Running %s", list_cmd)
         list_output = call_subprocess(
             list_cmd,
             show_stdout=False,
@@ -107,7 +110,7 @@ def get_venv_executable_names(name, system_wide=False):
                 break
 
     file_cmd = [venv_pip, "show", "-f", main_package_name]
-    log.debug("Running {}".format(file_cmd))
+    log.debug("Running %s", file_cmd)
     try:
         for line in call_subprocess(
             file_cmd,
@@ -124,6 +127,7 @@ def get_venv_executable_names(name, system_wide=False):
 
 
 def get_current_version(name, system_wide=False):
+    """Return the current version of the package"""
     venv_pip = get_venv_pip(name, system_wide=system_wide)
     if venv_pip is None:
         return "damaged (no inner pip)"
@@ -147,7 +151,7 @@ def get_current_version(name, system_wide=False):
 
 def create_virtualenv(venv_dir):
     """Create virtualenv at the given path"""
-    log.debug("Creating virtualenv at {}".format(venv_dir))
+    log.debug("Creating virtualenv at %s", venv_dir)
     if USE_VIRTUALENV:
         try:
             virtualenv.create_environment(venv_dir)
@@ -166,16 +170,17 @@ def ensure_latest_pip(venv_pip):
     # the env var is supposed to hide the "old version" warning emitted
     # in the very first run
     log.info("Ensuring latest pip in the virtualenv")
-    log.debug("PIP_DISABLE_PIP_VERSION_CHECK=1 " + " ".join(args))
+    log.debug("PIP_DISABLE_PIP_VERSION_CHECK=1 %s", " ".join(args))
     call_subprocess(args, extra_env={"PIP_DISABLE_PIP_VERSION_CHECK": "1"})
 
 
 def install_package(name, system_wide=False, upgrade=False):
+    """Install the given package"""
     # for system-wide install, we must ensure virtualenv and pip create world-readable files,
     # umask 022 will create 755/644
     restore_umask = None
     if system_wide:
-        restore_umask = os.umask(0o022)
+        restore_umask = os.umask(0o022)  # NOSONAR
     # create and activate the virtual environment
     bin_dir = get_bin_dir(system_wide=system_wide)
 
@@ -186,12 +191,12 @@ def install_package(name, system_wide=False, upgrade=False):
     create = True
     venv_pip = venv_dir + "/bin/pip"
     if upgrade:
-        log.info("Upgrading {} {} ...".format(name, install_for))
+        log.info("Upgrading %s %s ...", name, install_for)
         # if pip is there, do not recreate virtualenv
         if os.path.exists(venv_pip):
             create = False
     else:
-        log.info("Installing {} {} ...".format(name, install_for))
+        log.info("Installing %s %s ...", name, install_for)
 
     if create:
         create_virtualenv(venv_dir)
@@ -199,7 +204,7 @@ def install_package(name, system_wide=False, upgrade=False):
     # before invoking pip, ensure it is the latest by upgrading it
     ensure_latest_pip(venv_pip)
 
-    log.debug("Running pip install in the virtualenv {}".format(name))
+    log.debug("Running pip install in the virtualenv %s", name)
     # call_subprocess here is used for convenience: since we already import
     # this, why not :)
     args = [venv_pip, "install"]
@@ -220,37 +225,38 @@ def install_package(name, system_wide=False, upgrade=False):
         if confirm_smth("Shall I remove it as something useless?"):
             remove_package(name, system_wide)
         else:
-            log.info("Oh, alright. You can peak around in {}".format(venv_dir))
+            log.info("Oh, alright. You can peak around in %s", venv_dir)
     else:
         make_sure_path_exists(bin_dir)
         for bin_name in pkg_bin_names:
             src = os.path.join(venv_dir, "bin", bin_name)
             dst = os.path.join(bin_dir, bin_name)
-            log.debug("Creating symlink: {} -> {}".format(src, dst))
+            log.debug("Creating symlink: %s -> %s", src, dst)
             symlink(src, dst, overwrite=True)
         if not is_bin_in_path(system_wide):
             log.warning(
-                '{} is not in PATH so you can only launch programs like "{}" '
-                "by their complete filename, e.g. {} !".format(
-                    bin_dir, pkg_bin_names[0], bin_dir + "/" + pkg_bin_names[0]
-                )
+                '%s is not in PATH so you can only launch programs like "%s" '
+                "by their complete filename, e.g. %s !",
+                bin_dir,
+                pkg_bin_names[0],
+                bin_dir + "/" + pkg_bin_names[0],
             )
             log.info("Setup your environment PATH variable by running: ")
             log.info(
-                "echo 'export PATH=$PATH:{}' >> ~/.bashrc && source "
-                "~/.bashrc".format(bin_dir if system_wide else "$HOME/.local/bin")
+                "echo 'export PATH=$PATH:%s' >> ~/.bashrc && source ~/.bashrc",
+                bin_dir if system_wide else "$HOME/.local/bin",
             )
         else:
             log.info(
-                "Programs installed. You can run them by typing: {}".format(
-                    ", ".join(pkg_bin_names)
-                )
+                "Programs installed. You can run them by typing: %s",
+                ", ".join(pkg_bin_names),
             )
     if restore_umask:
         os.umask(restore_umask)
 
 
 def list_packages():
+    """List installed packages"""
     all_packages = [["Package", "Version"]]
 
     if os.path.exists(get_venvs_dir()):
@@ -273,6 +279,7 @@ def list_packages():
 
 
 def is_bin_in_path(system_wide=False):
+    """Check if the bin directory is in PATH"""
     if system_wide:
         # assume that /usr/local/bin is always in PATH
         # the assumption here is because we don't want to falsely emit warning
@@ -286,11 +293,10 @@ def is_bin_in_path(system_wide=False):
 
 
 def remove_package(name, system_wide=False, confirmation_needed=True, silent=False):
+    """Remove the given package"""
     venv_dir = get_venv_dir(name, system_wide)
     if not os.path.exists(venv_dir):
-        log.warning(
-            "Looks like {} already does not exist. Nothing to do".format(venv_dir)
-        )
+        log.warning("Looks like %s already does not exist. Nothing to do", venv_dir)
         return False
     if confirmation_needed and not confirm_smth(
         'Are you sure you want to remove package "{}"'.format(name)
@@ -302,18 +308,20 @@ def remove_package(name, system_wide=False, confirmation_needed=True, silent=Fal
 
     for bin_name in pkg_bin_names:
         dst = os.path.join(bin_dir, bin_name)
-        log.info("Removing symlink: {}".format(dst))
+        log.info("Removing symlink: %s", dst)
         ensure_file_is_absent(dst)
-    log.debug("Going to remove: {}".format(venv_dir))
+    log.debug("Going to remove: %s", venv_dir)
     if os.path.exists(venv_dir):
         shutil.rmtree(venv_dir)
     if silent:
-        log.debug("Cleaned up {}".format(name))
+        log.debug("Cleaned up %s", name)
     else:
-        log.info("{} was removed.".format(name))
+        log.info("%s was removed.", name)
+    return True
 
 
 def main():
+    """Main entry point"""
     parser = argparse.ArgumentParser(
         description="Safely install and remove PyPi (pip) programs "
         "without breaking your system",
@@ -379,6 +387,4 @@ def main():
             confirmation_needed=args.confirmation_needed,
         )
     else:
-        log.error(
-            'Unknown command "{}". Possible: install, list, remove'.format(args.command)
-        )
+        log.error('Unknown command "%s". Possible: install, list, remove', args.command)
