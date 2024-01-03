@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import shutil
+import sys
 
 import six
 from tabulate import tabulate
@@ -174,6 +175,17 @@ def ensure_latest_pip(venv_pip):
     call_subprocess(args, extra_env={"PIP_DISABLE_PIP_VERSION_CHECK": "1"})
 
 
+def ensure_certifi(venv_python):
+    """Ensure certifi is installed in the virtualenv"""
+    # Only do this on Darwin (OSX)
+    if not sys.platform.startswith("darwin"):
+        return
+    args = [venv_python, os.path.join(os.path.dirname(__file__), "install_certifi.py")]
+    log.info("Ensuring certifi in the virtualenv")
+    log.debug(" ".join(args))
+    call_subprocess(args)
+
+
 def install_package(name, system_wide=False, upgrade=False):
     """Install the given package"""
     # for system-wide install, we must ensure virtualenv and pip create world-readable files,
@@ -190,6 +202,7 @@ def install_package(name, system_wide=False, upgrade=False):
     install_for = "system-wide" if system_wide else "for current user"
     create = True
     venv_pip = venv_dir + "/bin/pip"
+    venv_python = venv_dir + "/bin/python"
     if upgrade:
         log.info("Upgrading %s %s ...", name, install_for)
         # if pip is there, do not recreate virtualenv
@@ -203,6 +216,8 @@ def install_package(name, system_wide=False, upgrade=False):
 
     # before invoking pip, ensure it is the latest by upgrading it
     ensure_latest_pip(venv_pip)
+
+    ensure_certifi(venv_python)
 
     log.debug("Running pip install in the virtualenv %s", name)
     # call_subprocess here is used for convenience: since we already import
