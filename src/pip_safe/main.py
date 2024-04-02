@@ -9,7 +9,7 @@ import sys
 import six
 from tabulate import tabulate
 
-from pip_safe.__about__ import __version__
+from pip_safe.argparse_version import VersionAction
 from pip_safe.utils import (
     symlink,
     make_sure_path_exists,
@@ -361,11 +361,8 @@ def main():
     parser.add_argument(
         "--system", dest="system", action="store_true", help="Install for all users"
     )
-    parser.add_argument(
-        "--version",
-        action="version",
-        version="%(prog)s {version}".format(version=__version__),
-    )
+
+    parser.add_argument("--version", action=VersionAction)
     parser.set_defaults(verbose=False, verbose_more=False, system=False)
     args = parser.parse_args()
 
