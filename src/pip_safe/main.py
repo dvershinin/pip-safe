@@ -346,7 +346,7 @@ def main():
         "command",
         metavar="<command>",
         default=None,
-        choices=["install", "update", "upgrade", "list", "remove"],
+        choices=["install", "update", "upgrade", "list", "remove", "uninstall"],
         help="Command to run, e.g. install, update, remove or list",
     )
     parser.add_argument("package", metavar="package-name", nargs="?", default=None)
@@ -392,7 +392,7 @@ def main():
         install_package(name=args.package, system_wide=args.system, upgrade=True)
     elif args.command == "list":
         list_packages()
-    elif args.command == "remove":
+    elif args.command in ["remove", "uninstall"]:
         remove_package(
             name=args.package,
             system_wide=args.system,
